@@ -1,48 +1,19 @@
-import { useMemo, useRef, useState } from "react";
-import { geoEquirectangular, geoPath } from "d3-geo";
-import { feature } from "topojson-client";
-import worldData from "world-atlas/countries-110m.json";
+import { useMemo, useState } from "react";
+import Artwork from "./Artwork";
 import WorldMap from "./WorldMap";
-const MAP_WIDTH = 1000;
-const MAP_HEIGHT = 500;
-const MAX_POINTS = 1000;
+import {
+  rounds,
+  starterLeaders,
+  maximumLocationPoints,
+  maximumYearPoints,
+} from "./gameData";
 
-const questions = [
-  {
-    structure: "Sydney Opera House",
-    location: "Sydney, Australia",
-    latitude: -33.8568,
-    longitude: 151.2153,
-    clue: "A performing arts complex famous for its distinctive shell-shaped roof.",
-    icon: "🎭",
-  },
-  {
-    structure: "Golden Gate Bridge",
-    location: "San Francisco, USA",
-    latitude: 37.8199,
-    longitude: -122.4783,
-    clue: "An iconic suspension bridge spanning the Golden Gate strait.",
-    icon: "🌉",
-  },
-  {
-    structure: "Millau Viaduct",
-    location: "Millau, France",
-    latitude: 44.0775,
-    longitude: 3.0227,
-    clue: "A multi-span cable-stayed bridge crossing the Tarn Valley.",
-    icon: "🏗️",
-  },
-  {
-    structure: "Brooklyn Bridge",
-    location: "New York City, USA",
-    latitude: 40.7061,
-    longitude: -73.9969,
-    clue: "A historic hybrid suspension and cable-stayed bridge completed in 1883.",
-    icon: "🌁",
-  },
-];
-
-function calculateDistance(latitude1, longitude1, latitude2, longitude2) {
+const calculateDistance = (
+  latitude1,
+  longitude1,
+  latitude2,
+  longitude2
+) => {
   const earthRadius = 6371;
   const degreesToRadians = Math.PI / 180;
 
@@ -58,12 +29,29 @@ function calculateDistance(latitude1, longitude1, latitude2, longitude2) {
       Math.cos(latitude2 * degreesToRadians) *
       Math.sin(longitudeDifference / 2) ** 2;
 
-  return 2 * earthRadius * Math.asin(Math.sqrt(value));
-}
+  return (
+    2 *
+    earthRadius *
+    Math.asin(Math.sqrt(value))
+  );
+};
 
-function calculatePoints(distance) {
-  return Math.round(MAX_POINTS * Math.exp(-distance / 2000));
-}
+const calculateLocationPoints = (distance) =>
+  Math.round(
+    maximumLocationPoints *
+      Math.exp(-distance / 2000)
+  );
+
+const calculateYearPoints = (
+  guessedYear,
+  correctYear
+) =>
+  Math.round(
+    maximumYearPoints *
+      Math.exp(
+        -Math.abs(guessedYear - correctYear) / 35
+      )
+  );
 
 const styles = {
   app: {
@@ -87,12 +75,16 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: "20px",
+    gap: "18px",
     marginBottom: "22px",
   },
 
+  brandGroup: {
+    minWidth: 0,
+  },
+
   eyebrow: {
-    margin: "0 0 5px",
+    margin: "0 0 6px",
     color: "#fb923c",
     fontSize: "12px",
     fontWeight: "900",
@@ -101,18 +93,25 @@ const styles = {
 
   title: {
     margin: 0,
-    fontSize: "clamp(28px, 5vw, 44px)",
+    fontSize: "clamp(27px, 5vw, 44px)",
     lineHeight: 1,
     fontWeight: "900",
   },
 
+  headerActions: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+  },
+
   scoreBox: {
     minWidth: "125px",
-    padding: "12px 18px",
+    padding: "12px 17px",
     border: "1px solid rgba(255,255,255,0.12)",
     borderRadius: "16px",
     background: "rgba(15,23,42,0.9)",
     textAlign: "right",
+    boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
   },
 
   scoreNumber: {
@@ -124,6 +123,21 @@ const styles = {
   scoreLabel: {
     color: "#94a3b8",
     fontSize: "12px",
+  },
+
+  iconButton: {
+    display: "grid",
+    width: "46px",
+    height: "46px",
+    margin: 0,
+    padding: 0,
+    placeItems: "center",
+    border: "1px solid rgba(255,255,255,0.12)",
+    borderRadius: "14px",
+    background: "#1e293b",
+    color: "white",
+    fontSize: "20px",
+    cursor: "pointer",
   },
 
   questionMeta: {
@@ -146,54 +160,48 @@ const styles = {
   progressBar: {
     height: "100%",
     borderRadius: "999px",
-    background: "linear-gradient(90deg, #f97316, #facc15)",
+    background:
+      "linear-gradient(90deg, #f97316, #facc15)",
     transition: "width 0.3s ease",
   },
 
   card: {
-    overflow: "hidden",
     marginBottom: "18px",
+    padding: "20px",
     border: "1px solid rgba(255,255,255,0.1)",
-    borderRadius: "26px",
+    borderRadius: "28px",
     background: "rgba(15,23,42,0.95)",
     boxShadow: "0 25px 70px rgba(0,0,0,0.35)",
   },
 
-  questionHeader: {
+  artworkPrompt: {
     display: "flex",
     alignItems: "center",
-    gap: "18px",
-    padding: "22px",
-    background:
-      "linear-gradient(135deg, #075985 0%, #1d4ed8 55%, #312e81 100%)",
+    justifyContent: "space-between",
+    gap: "16px",
+    marginBottom: "15px",
   },
 
-  iconBox: {
-    display: "grid",
-    flex: "0 0 72px",
-    width: "72px",
-    height: "72px",
-    placeItems: "center",
-    borderRadius: "18px",
-    background: "rgba(255,255,255,0.15)",
-    fontSize: "40px",
-  },
-
-  structureName: {
-    margin: "0 0 7px",
-    fontSize: "clamp(25px, 5vw, 40px)",
-    lineHeight: 1.05,
+  sectionTitle: {
+    margin: 0,
+    fontSize: "22px",
     fontWeight: "900",
   },
 
-  clue: {
-    margin: 0,
-    color: "#dbeafe",
-    lineHeight: 1.45,
+  sectionNote: {
+    color: "#94a3b8",
+    fontSize: "13px",
+    textAlign: "right",
   },
 
-  mapSection: {
-    padding: "22px",
+  clueBox: {
+    marginTop: "15px",
+    padding: "14px 16px",
+    border: "1px solid rgba(125,211,252,0.2)",
+    borderRadius: "15px",
+    background: "rgba(7,89,133,0.25)",
+    color: "#dbeafe",
+    lineHeight: 1.5,
   },
 
   mapHeadingRow: {
@@ -202,36 +210,6 @@ const styles = {
     justifyContent: "space-between",
     gap: "15px",
     marginBottom: "14px",
-  },
-
-  mapHeading: {
-    margin: 0,
-    fontSize: "22px",
-    fontWeight: "900",
-  },
-
-  mapInstruction: {
-    color: "#94a3b8",
-    fontSize: "13px",
-    textAlign: "right",
-  },
-
-  mapWrapper: {
-    position: "relative",
-    width: "100%",
-    aspectRatio: "2 / 1",
-    overflow: "hidden",
-    border: "4px solid #334155",
-    borderRadius: "18px",
-    background: "#89c9df",
-    cursor: "crosshair",
-    boxSizing: "border-box",
-  },
-
-  mapSvg: {
-    display: "block",
-    width: "100%",
-    height: "100%",
   },
 
   legend: {
@@ -252,20 +230,60 @@ const styles = {
   orangeDot: {
     width: "12px",
     height: "12px",
+    border: "2px solid white",
     borderRadius: "50%",
     background: "#f97316",
-    border: "2px solid white",
   },
 
   greenDot: {
     width: "12px",
     height: "12px",
+    border: "2px solid white",
     borderRadius: "50%",
     background: "#22c55e",
-    border: "2px solid white",
   },
 
-  button: {
+  yearPanel: {
+    marginTop: "18px",
+    padding: "17px",
+    borderRadius: "17px",
+    background: "#1e293b",
+  },
+
+  yearHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "12px",
+    marginBottom: "12px",
+  },
+
+  yearTitle: {
+    fontSize: "18px",
+    fontWeight: "900",
+  },
+
+  yearPoints: {
+    color: "#94a3b8",
+    fontSize: "12px",
+    textAlign: "right",
+  },
+
+  range: {
+    width: "100%",
+    accentColor: "#8b5cf6",
+    cursor: "pointer",
+  },
+
+  rangeLabels: {
+    display: "flex",
+    justifyContent: "space-between",
+    marginTop: "5px",
+    color: "#94a3b8",
+    fontSize: "11px",
+  },
+
+  primaryButton: {
     width: "100%",
     marginTop: "17px",
     padding: "16px",
@@ -291,22 +309,31 @@ const styles = {
     background: "#052e2b",
   },
 
+  answerLabel: {
+    marginBottom: "5px",
+    color: "#6ee7b7",
+    fontSize: "11px",
+    fontWeight: "900",
+    letterSpacing: "0.13em",
+  },
+
   resultTitle: {
     margin: "0 0 4px",
-    color: "#6ee7b7",
-    fontSize: "22px",
+    color: "white",
+    fontSize: "28px",
     fontWeight: "900",
   },
 
   resultLocation: {
     display: "block",
-    marginBottom: "14px",
+    marginBottom: "15px",
     color: "#d1fae5",
   },
 
   resultGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gridTemplateColumns:
+      "repeat(auto-fit, minmax(150px, 1fr))",
     gap: "10px",
   },
 
@@ -320,8 +347,8 @@ const styles = {
     display: "block",
     marginBottom: "3px",
     color: "#6ee7b7",
-    fontSize: "11px",
-    fontWeight: "800",
+    fontSize: "10px",
+    fontWeight: "900",
     letterSpacing: "0.08em",
   },
 
@@ -330,10 +357,23 @@ const styles = {
     fontWeight: "900",
   },
 
-  resultsCard: {
-    maxWidth: "680px",
-    margin: "12vh auto 0",
-    padding: "45px 28px",
+  secondaryButton: {
+    width: "100%",
+    marginTop: "13px",
+    padding: "14px",
+    border: "1px solid rgba(255,255,255,0.13)",
+    borderRadius: "15px",
+    background: "#1e293b",
+    color: "white",
+    fontSize: "15px",
+    fontWeight: "800",
+    cursor: "pointer",
+  },
+
+  finalCard: {
+    maxWidth: "700px",
+    margin: "7vh auto 0",
+    padding: "42px 28px",
     border: "1px solid rgba(255,255,255,0.1)",
     borderRadius: "30px",
     background: "rgba(15,23,42,0.96)",
@@ -353,30 +393,310 @@ const styles = {
     fontWeight: "900",
   },
 
-  restartButton: {
-    marginTop: "25px",
-    padding: "15px 28px",
+  finalText: {
+    margin: "20px auto 0",
+    maxWidth: "530px",
+    color: "#e2e8f0",
+    fontSize: "17px",
+    lineHeight: 1.5,
+  },
+
+  namePanel: {
+    marginTop: "26px",
+    padding: "18px",
+    borderRadius: "18px",
+    background: "#1e293b",
+  },
+
+  inputRow: {
+    display: "flex",
+    gap: "9px",
+  },
+
+  nameInput: {
+    minWidth: 0,
+    flex: 1,
+    padding: "14px 16px",
+    border: "1px solid #475569",
+    borderRadius: "14px",
+    outline: "none",
+    background: "#0f172a",
+    color: "white",
+    fontSize: "15px",
+  },
+
+  addButton: {
+    padding: "12px 18px",
     border: "none",
-    borderRadius: "16px",
+    borderRadius: "14px",
     background: "#f97316",
     color: "#07111f",
-    fontSize: "17px",
     fontWeight: "900",
     cursor: "pointer",
   },
+
+  successMessage: {
+    marginTop: "22px",
+    padding: "14px",
+    borderRadius: "14px",
+    background: "#064e3b",
+    color: "#a7f3d0",
+    fontWeight: "800",
+  },
+
+  finalButtons: {
+    display: "flex",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: "10px",
+    marginTop: "22px",
+  },
+
+  finalButton: {
+    padding: "14px 21px",
+    border: "none",
+    borderRadius: "14px",
+    background: "#f97316",
+    color: "#07111f",
+    fontWeight: "900",
+    cursor: "pointer",
+  },
+
+  finalSecondaryButton: {
+    padding: "14px 21px",
+    border: "1px solid rgba(255,255,255,0.13)",
+    borderRadius: "14px",
+    background: "#1e293b",
+    color: "white",
+    fontWeight: "900",
+    cursor: "pointer",
+  },
+
+  modalBackdrop: {
+    position: "fixed",
+    zIndex: 100,
+    inset: 0,
+    display: "grid",
+    padding: "20px",
+    placeItems: "center",
+    background: "rgba(2,6,23,0.88)",
+    backdropFilter: "blur(8px)",
+  },
+
+  modal: {
+    width: "100%",
+    maxWidth: "650px",
+    maxHeight: "85vh",
+    overflowY: "auto",
+    padding: "25px",
+    border: "1px solid rgba(255,255,255,0.12)",
+    borderRadius: "25px",
+    background: "#0f172a",
+    boxShadow: "0 30px 90px rgba(0,0,0,0.55)",
+  },
+
+  modalHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: "13px",
+    marginBottom: "20px",
+  },
+
+  modalTitle: {
+    margin: 0,
+    fontSize: "28px",
+    fontWeight: "900",
+  },
+
+  closeButton: {
+    display: "grid",
+    width: "42px",
+    height: "42px",
+    marginLeft: "auto",
+    placeItems: "center",
+    border: "none",
+    borderRadius: "12px",
+    background: "#1e293b",
+    color: "white",
+    fontSize: "18px",
+    cursor: "pointer",
+  },
+
+  leaderList: {
+    display: "grid",
+    gap: "9px",
+  },
+
+  leaderRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    padding: "14px 16px",
+    borderRadius: "14px",
+    background: "#1e293b",
+  },
+
+  firstLeader: {
+    background: "#facc15",
+    color: "#07111f",
+  },
+
+  leaderRank: {
+    width: "35px",
+    fontSize: "20px",
+    fontWeight: "900",
+  },
+
+  leaderName: {
+    minWidth: 0,
+    overflow: "hidden",
+    fontWeight: "800",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+
+  leaderScore: {
+    marginLeft: "auto",
+    fontSize: "18px",
+    fontWeight: "900",
+  },
+
+  localNotice: {
+    marginTop: "17px",
+    color: "#94a3b8",
+    fontSize: "12px",
+    lineHeight: 1.5,
+  },
 };
 
-export default function App() {
-  const [questionIndex, setQuestionIndex] = useState(0);
-  const [score, setScore] = useState(0);
-  const [guess, setGuess] = useState(null);
-  const [result, setResult] = useState(null);
-  const [finished, setFinished] = useState(false);
+function Leaderboard({
+  leaders,
+  onClose,
+}) {
+  const rankedLeaders = useMemo(
+    () =>
+      [...leaders].sort(
+        (leader1, leader2) =>
+          leader2.score - leader1.score
+      ),
+    [leaders]
+  );
 
-  const question = questions[questionIndex];
+  return (
+    <div style={styles.modalBackdrop}>
+      <section style={styles.modal}>
+        <div style={styles.modalHeader}>
+          <span style={{ fontSize: "35px" }}>
+            🏆
+          </span>
+
+          <div>
+            <h2 style={styles.modalTitle}>
+              Leaderboard
+            </h2>
+
+            <div
+              style={{
+                color: "#94a3b8",
+                fontSize: "13px",
+              }}
+            >
+              Best completed journeys
+            </div>
+          </div>
+
+          <button
+            type="button"
+            style={styles.closeButton}
+            onClick={onClose}
+            aria-label="Close leaderboard"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div style={styles.leaderList}>
+          {rankedLeaders.map(
+            (leader, index) => (
+              <div
+                key={`${leader.name}-${index}`}
+                style={{
+                  ...styles.leaderRow,
+                  ...(index === 0
+                    ? styles.firstLeader
+                    : {}),
+                }}
+              >
+                <span style={styles.leaderRank}>
+                  {index + 1}
+                </span>
+
+                <span style={styles.leaderName}>
+                  {leader.name}
+                </span>
+
+                <span style={styles.leaderScore}>
+                  {leader.score.toLocaleString()}
+                </span>
+              </div>
+            )
+          )}
+        </div>
+
+        <p style={styles.localNotice}>
+          This leaderboard is currently stored only
+          in this browser session. A shared community
+          leaderboard can be connected later.
+        </p>
+      </section>
+    </div>
+  );
+}
+
+export default function App() {
+  const [roundIndex, setRoundIndex] =
+    useState(0);
+
+  const [score, setScore] = useState(0);
+
+  const [guess, setGuess] = useState(null);
+
+  const [selectedYear, setSelectedYear] =
+    useState(1900);
+
+  const [result, setResult] =
+    useState(null);
+
+  const [finished, setFinished] =
+    useState(false);
+
+  const [leaders, setLeaders] =
+    useState(starterLeaders);
+
+  const [showLeaderboard, setShowLeaderboard] =
+    useState(false);
+
+  const [playerName, setPlayerName] =
+    useState("");
+
+  const [scoreSaved, setScoreSaved] =
+    useState(false);
+
+  const round = rounds[roundIndex];
 
   const progress =
-    ((questionIndex + 1) / questions.length) * 100;
+    ((roundIndex + 1) / rounds.length) *
+    100;
+
+  const maximumGameScore = rounds.reduce(
+    (total, currentRound) =>
+      total +
+      maximumLocationPoints +
+      (currentRound.historical
+        ? maximumYearPoints
+        : 0),
+    0
+  );
 
   function placeGuess(newGuess) {
     if (!result) {
@@ -392,43 +712,85 @@ export default function App() {
     const distance = calculateDistance(
       guess.latitude,
       guess.longitude,
-      question.latitude,
-      question.longitude
+      round.latitude,
+      round.longitude
     );
 
-    const points = calculatePoints(distance);
+    const locationPoints =
+      calculateLocationPoints(distance);
+
+    const yearPoints = round.historical
+      ? calculateYearPoints(
+          selectedYear,
+          round.year
+        )
+      : 0;
+
+    const roundPoints =
+      locationPoints + yearPoints;
 
     setResult({
       distance,
-      points,
+      locationPoints,
+      yearPoints,
+      roundPoints,
     });
 
-    setScore((currentScore) => currentScore + points);
+    setScore(
+      (currentScore) =>
+        currentScore + roundPoints
+    );
   }
 
-  function nextQuestion() {
-    if (questionIndex === questions.length - 1) {
+  function nextRound() {
+    if (roundIndex === rounds.length - 1) {
       setFinished(true);
       return;
     }
 
-    setQuestionIndex((currentIndex) => currentIndex + 1);
+    setRoundIndex(
+      (currentIndex) => currentIndex + 1
+    );
+
     setGuess(null);
     setResult(null);
+    setSelectedYear(1900);
   }
 
   function restartGame() {
-    setQuestionIndex(0);
+    setRoundIndex(0);
     setScore(0);
     setGuess(null);
+    setSelectedYear(1900);
     setResult(null);
     setFinished(false);
+    setPlayerName("");
+    setScoreSaved(false);
+    setShowLeaderboard(false);
+  }
+
+  function saveScore() {
+    const cleanName = playerName.trim();
+
+    if (!cleanName || scoreSaved) {
+      return;
+    }
+
+    setLeaders((currentLeaders) => [
+      ...currentLeaders,
+      {
+        name: cleanName,
+        score,
+      },
+    ]);
+
+    setScoreSaved(true);
+    setShowLeaderboard(true);
   }
 
   if (finished) {
-    const maximumScore = questions.length * MAX_POINTS;
     const percentage = Math.round(
-      (score / maximumScore) * 100
+      (score / maximumGameScore) * 100
     );
 
     let finalMessage =
@@ -447,7 +809,7 @@ export default function App() {
 
     return (
       <main style={styles.app}>
-        <section style={styles.resultsCard}>
+        <section style={styles.finalCard}>
           <div style={styles.trophy}>🏆</div>
 
           <p style={styles.eyebrow}>
@@ -464,37 +826,102 @@ export default function App() {
 
           <p style={{ color: "#94a3b8" }}>
             points out of{" "}
-            {maximumScore.toLocaleString()}
+            {maximumGameScore.toLocaleString()}
           </p>
 
-          <p
-            style={{
-              marginTop: "20px",
-              color: "#e2e8f0",
-              fontSize: "18px",
-              lineHeight: 1.5,
-            }}
-          >
+          <p style={styles.finalText}>
             {finalMessage}
           </p>
 
-          <button
-            type="button"
-            style={styles.restartButton}
-            onClick={restartGame}
-          >
-            Play again
-          </button>
+          {!scoreSaved ? (
+            <div style={styles.namePanel}>
+              <div
+                style={{
+                  marginBottom: "11px",
+                  fontWeight: "800",
+                }}
+              >
+                Add your score to the leaderboard
+              </div>
+
+              <div style={styles.inputRow}>
+                <input
+                  type="text"
+                  value={playerName}
+                  onChange={(event) =>
+                    setPlayerName(
+                      event.target.value
+                    )
+                  }
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      saveScore();
+                    }
+                  }}
+                  placeholder="Your name or nickname"
+                  maxLength={35}
+                  style={styles.nameInput}
+                />
+
+                <button
+                  type="button"
+                  style={{
+                    ...styles.addButton,
+                    ...(!playerName.trim()
+                      ? styles.disabledButton
+                      : {}),
+                  }}
+                  disabled={!playerName.trim()}
+                  onClick={saveScore}
+                >
+                  Add score
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div style={styles.successMessage}>
+              Your score has been added.
+            </div>
+          )}
+
+          <div style={styles.finalButtons}>
+            <button
+              type="button"
+              style={styles.finalSecondaryButton}
+              onClick={() =>
+                setShowLeaderboard(true)
+              }
+            >
+              View leaderboard
+            </button>
+
+            <button
+              type="button"
+              style={styles.finalButton}
+              onClick={restartGame}
+            >
+              Play again
+            </button>
+          </div>
         </section>
+
+        {showLeaderboard && (
+          <Leaderboard
+            leaders={leaders}
+            onClose={() =>
+              setShowLeaderboard(false)
+            }
+          />
+        )}
       </main>
     );
   }
 
-  return (
+    return (
     <main style={styles.app}>
       <div style={styles.container}>
         <header style={styles.header}>
-          <div>
+          <div style={styles.brandGroup}>
             <p style={styles.eyebrow}>
               TECHNICAL COMMUNITIES
             </p>
@@ -504,24 +931,52 @@ export default function App() {
             </h1>
           </div>
 
-          <div style={styles.scoreBox}>
-            <span style={styles.scoreNumber}>
-              {score.toLocaleString()}
-            </span>
+          <div style={styles.headerActions}>
+            <div style={styles.scoreBox}>
+              <span style={styles.scoreNumber}>
+                {score.toLocaleString()}
+              </span>
 
-            <span style={styles.scoreLabel}>
-              points
-            </span>
+              <span style={styles.scoreLabel}>
+                points
+              </span>
+            </div>
+
+            <button
+              type="button"
+              style={styles.iconButton}
+              onClick={() => setShowLeaderboard(true)}
+              title="View leaderboard"
+              aria-label="View leaderboard"
+            >
+              🏆
+            </button>
+
+            <button
+              type="button"
+              style={styles.iconButton}
+              onClick={restartGame}
+              title="Restart game"
+              aria-label="Restart game"
+            >
+              ↻
+            </button>
           </div>
         </header>
 
         <div style={styles.questionMeta}>
           <span>
-            Question {questionIndex + 1} of{" "}
-            {questions.length}
+            Question {roundIndex + 1} of {rounds.length}
           </span>
 
-          <span>Up to 1,000 points</span>
+          <span>
+            Up to{" "}
+            {(
+              maximumLocationPoints +
+              (round.historical ? maximumYearPoints : 0)
+            ).toLocaleString()}{" "}
+            points
+          </span>
         </div>
 
         <div style={styles.progressTrack}>
@@ -534,125 +989,195 @@ export default function App() {
         </div>
 
         <section style={styles.card}>
-          <div style={styles.questionHeader}>
-            <div style={styles.iconBox}>
-              {question.icon}
-            </div>
+          <div style={styles.artworkPrompt}>
+            <h2 style={styles.sectionTitle}>
+              Identify the structure
+            </h2>
 
-            <div>
-              <h2 style={styles.structureName}>
-                {question.structure}
-              </h2>
-
-              <p style={styles.clue}>
-                {question.clue}
-              </p>
-            </div>
+            <span style={styles.sectionNote}>
+              Study the illustration, then place your pin
+            </span>
           </div>
 
-          <div style={styles.mapSection}>
-            <div style={styles.mapHeadingRow}>
-              <h3 style={styles.mapHeading}>
-                Place your pin
-              </h3>
+          <Artwork
+            type={round.artwork}
+            name={round.answer}
+            revealName={Boolean(result)}
+          />
 
-              <span style={styles.mapInstruction}>
-                {result
-                  ? "Answer locked"
-                  : guess
-                    ? "Click again to move your pin"
-                    : "Click anywhere on the map"}
-              </span>
-            </div>
-
-            <WorldMap
-              guess={guess}
-              answer={question}
-              locked={Boolean(result)}
-              onGuess={placeGuess}
-            />
-
-            <div style={styles.legend}>
-              <span style={styles.legendItem}>
-                <span style={styles.orangeDot} />
-                Your guess
-              </span>
-
-              {result && (
-                <span style={styles.legendItem}>
-                  <span style={styles.greenDot} />
-                  Correct location
-                </span>
-              )}
-            </div>
-
-            {!result ? (
-              <button
-                type="button"
-                style={{
-                  ...styles.button,
-                  ...(!guess
-                    ? styles.disabledButton
-                    : {}),
-                }}
-                disabled={!guess}
-                onClick={lockAnswer}
-              >
-                Lock answer
-              </button>
-            ) : (
-              <>
-                <div style={styles.resultBox}>
-                  <h3 style={styles.resultTitle}>
-                    {question.structure}
-                  </h3>
-
-                  <span style={styles.resultLocation}>
-                    {question.location}
-                  </span>
-
-                  <div style={styles.resultGrid}>
-                    <div style={styles.resultMetric}>
-                      <span style={styles.metricLabel}>
-                        DISTANCE
-                      </span>
-
-                      <span style={styles.metricValue}>
-                        {Math.round(
-                          result.distance
-                        ).toLocaleString()}{" "}
-                        km
-                      </span>
-                    </div>
-
-                    <div style={styles.resultMetric}>
-                      <span style={styles.metricLabel}>
-                        ROUND SCORE
-                      </span>
-
-                      <span style={styles.metricValue}>
-                        +{result.points.toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  style={styles.button}
-                  onClick={nextQuestion}
-                >
-                  {questionIndex ===
-                  questions.length - 1
-                    ? "Finish game"
-                    : "Next question"}{" "}
-                  →
-                </button>
-              </>
-            )}
+          <div style={styles.clueBox}>
+            <strong>Structural clue: </strong>
+            {round.clue}
           </div>
         </section>
+
+        <section style={styles.card}>
+          <div style={styles.mapHeadingRow}>
+            <h2 style={styles.sectionTitle}>
+              Place your pin
+            </h2>
+
+            <span style={styles.sectionNote}>
+              {result
+                ? "Answer locked"
+                : guess
+                  ? "Click again to move your pin"
+                  : "Click anywhere on the map"}
+            </span>
+          </div>
+
+          <WorldMap
+            key={roundIndex}
+            guess={guess}
+            answer={round}
+            locked={Boolean(result)}
+            onGuess={placeGuess}
+          />
+
+          <div style={styles.legend}>
+            <span style={styles.legendItem}>
+              <span style={styles.orangeDot} />
+              Your guess
+            </span>
+
+            {result && (
+              <span style={styles.legendItem}>
+                <span style={styles.greenDot} />
+                Correct location
+              </span>
+            )}
+          </div>
+
+          {round.historical && (
+            <div style={styles.yearPanel}>
+              <div style={styles.yearHeader}>
+                <span style={styles.yearTitle}>
+                  Year: {selectedYear}
+                </span>
+
+                <span style={styles.yearPoints}>
+                  Up to 1,000 additional points
+                </span>
+              </div>
+
+              <input
+                type="range"
+                min={round.minimumYear}
+                max={round.maximumYear}
+                value={selectedYear}
+                disabled={Boolean(result)}
+                onChange={(event) =>
+                  setSelectedYear(Number(event.target.value))
+                }
+                style={styles.range}
+              />
+
+              <div style={styles.rangeLabels}>
+                <span>{round.minimumYear}</span>
+                <span>{round.maximumYear}</span>
+              </div>
+            </div>
+          )}
+
+          {!result ? (
+            <button
+              type="button"
+              style={{
+                ...styles.primaryButton,
+                ...(!guess ? styles.disabledButton : {}),
+              }}
+              disabled={!guess}
+              onClick={lockAnswer}
+            >
+              Lock answer
+            </button>
+          ) : (
+            <>
+              <div style={styles.resultBox}>
+                <div style={styles.answerLabel}>
+                  ANSWER
+                </div>
+
+                <h2 style={styles.resultTitle}>
+                  {round.answer}
+                </h2>
+
+                <span style={styles.resultLocation}>
+                  {round.location}
+                  {round.historical
+                    ? ` · ${round.year}`
+                    : ""}
+                </span>
+
+                <div style={styles.resultGrid}>
+                  <div style={styles.resultMetric}>
+                    <span style={styles.metricLabel}>
+                      DISTANCE
+                    </span>
+
+                    <span style={styles.metricValue}>
+                      {Math.round(
+                        result.distance
+                      ).toLocaleString()}{" "}
+                      km
+                    </span>
+                  </div>
+
+                  <div style={styles.resultMetric}>
+                    <span style={styles.metricLabel}>
+                      LOCATION SCORE
+                    </span>
+
+                    <span style={styles.metricValue}>
+                      +{result.locationPoints.toLocaleString()}
+                    </span>
+                  </div>
+
+                  {round.historical && (
+                    <div style={styles.resultMetric}>
+                      <span style={styles.metricLabel}>
+                        YEAR SCORE
+                      </span>
+
+                      <span style={styles.metricValue}>
+                        +{result.yearPoints.toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+
+                  <div style={styles.resultMetric}>
+                    <span style={styles.metricLabel}>
+                      ROUND SCORE
+                    </span>
+
+                    <span style={styles.metricValue}>
+                      +{result.roundPoints.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                style={styles.primaryButton}
+                onClick={nextRound}
+              >
+                {roundIndex === rounds.length - 1
+                  ? "Finish game"
+                  : "Next question"}{" "}
+                →
+              </button>
+            </>
+          )}
+        </section>
       </div>
+
+      {showLeaderboard && (
+        <Leaderboard
+          leaders={leaders}
+          onClose={() => setShowLeaderboard(false)}
+        />
+      )}
     </main>
   );
 }
