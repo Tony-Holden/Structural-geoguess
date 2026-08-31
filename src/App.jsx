@@ -1029,7 +1029,7 @@ const [scoreSubmitting, setScoreSubmitting] =
     );
 
     let finalMessage =
-      "A solid effort. Time for another lap around the globe.";
+      "A solid effort. Practice makes perfect.";
 
     if (percentage >= 90) {
       finalMessage =
