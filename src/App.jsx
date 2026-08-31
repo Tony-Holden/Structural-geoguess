@@ -2,24 +2,15 @@ import { useEffect, useMemo, useState } from "react";
 import WorldMap from "./WorldMap";
 import QuizImage from "./QuizImage";
 import { loadWeeklyQuiz } from "./quizLoader";
+import {
+  getLeaderboard,
+  submitScore,
+} from "./leaderboardService";
 
 const MAX_LOCATION_POINTS = 1000;
 const MAX_YEAR_POINTS = 1000;
 
-const starterLeaders = [
-  {
-    name: "A. Engineer",
-    score: 4280,
-  },
-  {
-    name: "Concrete Carl",
-    score: 3940,
-  },
-  {
-    name: "Shear Genius",
-    score: 3510,
-  },
-];
+const starterLeaders = [];
 
 function calculateDistance(
   latitude1,
@@ -667,6 +658,21 @@ function Leaderboard({ leaders, onClose }) {
         </div>
 
         <div style={styles.leaderList}>
+          {leaders.length === 0 && (
+  <div
+    style={{
+      padding: "25px",
+      borderRadius: "14px",
+      background: "#1e293b",
+      color: "#cbd5e1",
+      textAlign: "center",
+    }}
+  >
+    No scores submitted yet. Be the first on
+    this week&apos;s leaderboard.
+  </div>
+)}
+``
           {rankedLeaders.map((leader, index) => (
             <div
               key={`${leader.name}-${index}`}
@@ -693,9 +699,8 @@ function Leaderboard({ leaders, onClose }) {
         </div>
 
         <p style={styles.localNotice}>
-          This leaderboard is currently stored only
-          in this browser session. We can connect a
-          shared community leaderboard later.
+          Shared leaderboard for the current weekly
+Structural GeoGuess challenge.
         </p>
       </section>
     </div>
@@ -728,6 +733,14 @@ export default function App() {
     useState("");
   const [scoreSaved, setScoreSaved] =
     useState(false);
+const [leaderboardLoading, setLeaderboardLoading] =
+  useState(false);
+
+const [leaderboardError, setLeaderboardError] =
+  useState("");
+
+const [scoreSubmitting, setScoreSubmitting] =
+  useState(false);
 
   useEffect(() => {
     let componentIsActive = true;
@@ -760,6 +773,44 @@ export default function App() {
       componentIsActive = false;
     };
   }, [loadingAttempt]);
+  async function refreshLeaderboard() {
+    if (!quiz?.quizId) {
+      return;
+    }
+
+    setLeaderboardLoading(true);
+    setLeaderboardError("");
+
+    try {
+      const databaseScores =
+        await getLeaderboard(quiz.quizId);
+
+      const formattedScores =
+        databaseScores.map((databaseScore) => ({
+          id: databaseScore.id,
+          name: databaseScore.player_name,
+          score: databaseScore.score,
+          submittedAt:
+            databaseScore.submitted_at,
+        }));
+
+      setLeaders(formattedScores);
+    } catch (error) {
+      setLeaderboardError(
+        error instanceof Error
+          ? error.message
+          : "The leaderboard could not be loaded."
+      );
+    } finally {
+      setLeaderboardLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (quiz?.quizId) {
+      refreshLeaderboard();
+    }
+  }, [quiz]);
 
   if (loadingError) {
     return (
@@ -923,23 +974,53 @@ export default function App() {
     );
   }
 
-  function saveScore() {
+  async function saveScore() {
     const cleanName = playerName.trim();
 
-    if (!cleanName || scoreSaved) {
+    if (
+      !cleanName ||
+      scoreSaved ||
+      scoreSubmitting
+    ) {
       return;
     }
 
-    setLeaders((currentLeaders) => [
-      ...currentLeaders,
-      {
-        name: cleanName,
-        score,
-      },
-    ]);
+    if (!quiz.quizId) {
+      setLeaderboardError(
+        "This quiz needs a quizId in quiz.json before scores can be submitted."
+      );
 
-    setScoreSaved(true);
-    setShowLeaderboard(true);
+      return;
+    }
+
+    setScoreSubmitting(true);
+    setLeaderboardError("");
+
+    try {
+      await submitScore({
+        playerName: cleanName,
+        score,
+        quizId: quiz.quizId,
+        quizTitle:
+          quiz.quizSubtitle ||
+          quiz.quizTitle ||
+          "Structural GeoGuess",
+      });
+
+      setScoreSaved(true);
+
+      await refreshLeaderboard();
+
+      setShowLeaderboard(true);
+    } catch (error) {
+      setLeaderboardError(
+        error instanceof Error
+          ? error.message
+          : "Your score could not be submitted."
+      );
+    } finally {
+      setScoreSubmitting(false);
+    }
   }
 
   if (finished) {
@@ -1022,20 +1103,44 @@ export default function App() {
                   style={styles.nameInput}
                 />
 
-                <button
-                  type="button"
-                  style={{
-                    ...styles.addButton,
-                    ...(!playerName.trim()
-                      ? styles.disabledButton
-                      : {}),
-                  }}
-                  disabled={!playerName.trim()}
-                  onClick={saveScore}
-                >
-                  Add score
-                </button>
+<button
+  type="button"
+  style={{
+    ...styles.addButton,
+    ...(
+      !playerName.trim() ||
+      scoreSubmitting
+        ? styles.disabledButton
+        : {}
+    ),
+  }}
+  disabled={
+    !playerName.trim() ||
+    scoreSubmitting
+  }
+  onClick={saveScore}
+>
+  {scoreSubmitting
+    ? "Submitting..."
+    : "Add score"}
+</button>
+              
               </div>
+              {leaderboardError && (
+  <div
+    style={{
+      marginTop: "12px",
+      padding: "11px",
+      borderRadius: "11px",
+      background: "#450a0a",
+      color: "#fecaca",
+      fontSize: "13px",
+    }}
+  >
+    {leaderboardError}
+  </div>
+)}
+
             </div>
           ) : (
             <div style={styles.savedMessage}>
