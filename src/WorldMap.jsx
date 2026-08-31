@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { geoEquirectangular, geoPath } from "d3-geo";
 import { feature } from "topojson-client";
-import worldData from "world-atlas/countries-110m.json";
+import worldData from "world-atlas/countries-50m.json";
 
 const MAP_WIDTH = 1000;
 const MAP_HEIGHT = 500;
