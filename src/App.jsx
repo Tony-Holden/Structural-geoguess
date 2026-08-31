@@ -66,7 +66,7 @@ const styles = {
     padding: "24px",
     color: "white",
     background:
-      "radial-gradient(circle at top, #163b65 0%, #07111f 48%, #030914 100%)",
+      "radial-gradient(circle at top, #123453 0%, #081b2f 48%, #040d17 100%)",
     fontFamily:
       'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
@@ -123,8 +123,8 @@ const styles = {
     padding: "14px 22px",
     border: "none",
     borderRadius: "14px",
-    background: "#f97316",
-    color: "#07111f",
+    background: "#8cc63f",
+    color: "#10200b",
     fontSize: "16px",
     fontWeight: "900",
     cursor: "pointer",
@@ -142,13 +142,24 @@ const styles = {
     minWidth: 0,
   },
 
-  eyebrow: {
-    margin: "0 0 6px",
-    color: "#fb923c",
-    fontSize: "12px",
-    fontWeight: "900",
-    letterSpacing: "0.22em",
+  logo: {
+    display: "block",
+    width: "auto",
+    maxWidth: "290px",
+    height: "76px",
+    marginBottom: "14px",
+    objectFit: "contain",
   },
+
+  eyebrow: {
+  display: "inline-block",
+  margin: "0 0 10px",
+  color: "#8cc63f",
+  fontSize: "17px",
+  fontWeight: "900",
+  letterSpacing: "0.19em",
+  lineHeight: 1.2,
+},
 
   title: {
     margin: 0,
@@ -225,7 +236,7 @@ const styles = {
     height: "100%",
     borderRadius: "999px",
     background:
-      "linear-gradient(90deg, #f97316, #facc15)",
+      "linear-gradient(90deg, #5f8f2f, #a7d54f)",
     transition: "width 0.3s ease",
   },
 
@@ -345,8 +356,8 @@ const styles = {
     padding: "16px",
     border: "none",
     borderRadius: "16px",
-    background: "#f97316",
-    color: "#07111f",
+    background: "#8cc63f",
+    color: "#10200b",
     fontSize: "17px",
     fontWeight: "900",
     cursor: "pointer",
@@ -430,7 +441,7 @@ const styles = {
 
   finalScore: {
     margin: "16px 0 4px",
-    color: "#facc15",
+    color: "#a7d54f",
     fontSize: "clamp(55px, 12vw, 88px)",
     lineHeight: 1,
     fontWeight: "900",
@@ -472,8 +483,8 @@ const styles = {
     padding: "12px 18px",
     border: "none",
     borderRadius: "14px",
-    background: "#f97316",
-    color: "#07111f",
+    background: "#8cc63f",
+    color: "#10200b",
     fontWeight: "900",
     cursor: "pointer",
   },
@@ -499,8 +510,8 @@ const styles = {
     padding: "14px 21px",
     border: "none",
     borderRadius: "14px",
-    background: "#f97316",
-    color: "#07111f",
+    background: "#8cc63f",
+    color: "#10200b",
     fontWeight: "900",
     cursor: "pointer",
   },
@@ -582,8 +593,8 @@ const styles = {
   },
 
   firstLeader: {
-    background: "#facc15",
-    color: "#07111f",
+    background: "#a7d54f",
+    color: "#10200b",
   },
 
   leaderRank: {
@@ -672,7 +683,6 @@ function Leaderboard({ leaders, onClose }) {
     this week&apos;s leaderboard.
   </div>
 )}
-``
           {rankedLeaders.map((leader, index) => (
             <div
               key={`${leader.name}-${index}`}
@@ -1050,7 +1060,6 @@ const [scoreSubmitting, setScoreSubmitting] =
           <p style={styles.eyebrow}>
             JOURNEY COMPLETE
           </p>
-
           <h1 style={styles.title}>
             {quiz.quizTitle ||
               "Structural GeoGuess"}
@@ -1186,6 +1195,12 @@ const [scoreSubmitting, setScoreSubmitting] =
       <div style={styles.container}>
         <header style={styles.header}>
           <div style={styles.brandGroup}>
+            <img
+              src="/images/logo.png"
+              alt="Structural Discipline logo"
+              style={styles.logo}
+            />
+
             <p style={styles.eyebrow}>
               TECHNICAL COMMUNITIES
             </p>

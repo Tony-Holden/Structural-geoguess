@@ -1,19 +1,23 @@
-import { useMemo, useState } from "react";
-import Artwork from "./Artwork";
+import { useEffect, useMemo, useState } from "react";
 import WorldMap from "./WorldMap";
+import QuizImage from "./QuizImage";
+import { loadWeeklyQuiz } from "./quizLoader";
 import {
-  rounds,
-  starterLeaders,
-  maximumLocationPoints,
-  maximumYearPoints,
-} from "./gameData";
+  getLeaderboard,
+  submitScore,
+} from "./leaderboardService";
 
-const calculateDistance = (
+const MAX_LOCATION_POINTS = 1000;
+const MAX_YEAR_POINTS = 1000;
+
+const starterLeaders = [];
+
+function calculateDistance(
   latitude1,
   longitude1,
   latitude2,
   longitude2
-) => {
+) {
   const earthRadius = 6371;
   const degreesToRadians = Math.PI / 180;
 
@@ -34,24 +38,26 @@ const calculateDistance = (
     earthRadius *
     Math.asin(Math.sqrt(value))
   );
-};
+}
 
-const calculateLocationPoints = (distance) =>
-  Math.round(
-    maximumLocationPoints *
+function calculateLocationPoints(distance) {
+  return Math.round(
+    MAX_LOCATION_POINTS *
       Math.exp(-distance / 2000)
   );
+}
 
-const calculateYearPoints = (
+function calculateYearPoints(
   guessedYear,
   correctYear
-) =>
-  Math.round(
-    maximumYearPoints *
+) {
+  return Math.round(
+    MAX_YEAR_POINTS *
       Math.exp(
         -Math.abs(guessedYear - correctYear) / 35
       )
   );
+}
 
 const styles = {
   app: {
@@ -69,6 +75,59 @@ const styles = {
     width: "100%",
     maxWidth: "1080px",
     margin: "0 auto",
+  },
+
+  centredCard: {
+    width: "calc(100% - 40px)",
+    maxWidth: "680px",
+    margin: "12vh auto 0",
+    padding: "38px 28px",
+    boxSizing: "border-box",
+    border: "1px solid rgba(255,255,255,0.12)",
+    borderRadius: "28px",
+    background: "rgba(15,23,42,0.96)",
+    textAlign: "center",
+    boxShadow: "0 25px 70px rgba(0,0,0,0.4)",
+  },
+
+  spinner: {
+    marginBottom: "18px",
+    fontSize: "55px",
+  },
+
+  errorIcon: {
+    marginBottom: "16px",
+    fontSize: "55px",
+  },
+
+  errorTitle: {
+    margin: "0 0 12px",
+    fontSize: "28px",
+    fontWeight: "900",
+  },
+
+  errorMessage: {
+    padding: "14px",
+    borderRadius: "14px",
+    background: "#450a0a",
+    color: "#fecaca",
+    fontFamily: "monospace",
+    fontSize: "13px",
+    lineHeight: 1.5,
+    textAlign: "left",
+    overflowWrap: "anywhere",
+  },
+
+  retryButton: {
+    marginTop: "20px",
+    padding: "14px 22px",
+    border: "none",
+    borderRadius: "14px",
+    background: "#f97316",
+    color: "#07111f",
+    fontSize: "16px",
+    fontWeight: "900",
+    cursor: "pointer",
   },
 
   header: {
@@ -96,6 +155,12 @@ const styles = {
     fontSize: "clamp(27px, 5vw, 44px)",
     lineHeight: 1,
     fontWeight: "900",
+  },
+
+  subtitle: {
+    margin: "8px 0 0",
+    color: "#94a3b8",
+    fontSize: "14px",
   },
 
   headerActions: {
@@ -129,7 +194,6 @@ const styles = {
     display: "grid",
     width: "46px",
     height: "46px",
-    margin: 0,
     padding: 0,
     placeItems: "center",
     border: "1px solid rgba(255,255,255,0.12)",
@@ -174,7 +238,7 @@ const styles = {
     boxShadow: "0 25px 70px rgba(0,0,0,0.35)",
   },
 
-  artworkPrompt: {
+  sectionHeader: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
@@ -202,14 +266,6 @@ const styles = {
     background: "rgba(7,89,133,0.25)",
     color: "#dbeafe",
     lineHeight: 1.5,
-  },
-
-  mapHeadingRow: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "15px",
-    marginBottom: "14px",
   },
 
   legend: {
@@ -357,19 +413,6 @@ const styles = {
     fontWeight: "900",
   },
 
-  secondaryButton: {
-    width: "100%",
-    marginTop: "13px",
-    padding: "14px",
-    border: "1px solid rgba(255,255,255,0.13)",
-    borderRadius: "15px",
-    background: "#1e293b",
-    color: "white",
-    fontSize: "15px",
-    fontWeight: "800",
-    cursor: "pointer",
-  },
-
   finalCard: {
     maxWidth: "700px",
     margin: "7vh auto 0",
@@ -435,7 +478,7 @@ const styles = {
     cursor: "pointer",
   },
 
-  successMessage: {
+  savedMessage: {
     marginTop: "22px",
     padding: "14px",
     borderRadius: "14px",
@@ -452,7 +495,7 @@ const styles = {
     marginTop: "22px",
   },
 
-  finalButton: {
+  finalPrimaryButton: {
     padding: "14px 21px",
     border: "none",
     borderRadius: "14px",
@@ -489,6 +532,7 @@ const styles = {
     maxHeight: "85vh",
     overflowY: "auto",
     padding: "25px",
+    boxSizing: "border-box",
     border: "1px solid rgba(255,255,255,0.12)",
     borderRadius: "25px",
     background: "#0f172a",
@@ -513,6 +557,7 @@ const styles = {
     width: "42px",
     height: "42px",
     marginLeft: "auto",
+    padding: 0,
     placeItems: "center",
     border: "none",
     borderRadius: "12px",
@@ -569,15 +614,12 @@ const styles = {
   },
 };
 
-function Leaderboard({
-  leaders,
-  onClose,
-}) {
+function Leaderboard({ leaders, onClose }) {
   const rankedLeaders = useMemo(
     () =>
       [...leaders].sort(
-        (leader1, leader2) =>
-          leader2.score - leader1.score
+        (firstLeader, secondLeader) =>
+          secondLeader.score - firstLeader.score
       ),
     [leaders]
   );
@@ -616,37 +658,49 @@ function Leaderboard({
         </div>
 
         <div style={styles.leaderList}>
-          {rankedLeaders.map(
-            (leader, index) => (
-              <div
-                key={`${leader.name}-${index}`}
-                style={{
-                  ...styles.leaderRow,
-                  ...(index === 0
-                    ? styles.firstLeader
-                    : {}),
-                }}
-              >
-                <span style={styles.leaderRank}>
-                  {index + 1}
-                </span>
+          {leaders.length === 0 && (
+  <div
+    style={{
+      padding: "25px",
+      borderRadius: "14px",
+      background: "#1e293b",
+      color: "#cbd5e1",
+      textAlign: "center",
+    }}
+  >
+    No scores submitted yet. Be the first on
+    this week&apos;s leaderboard.
+  </div>
+)}
+``
+          {rankedLeaders.map((leader, index) => (
+            <div
+              key={`${leader.name}-${index}`}
+              style={{
+                ...styles.leaderRow,
+                ...(index === 0
+                  ? styles.firstLeader
+                  : {}),
+              }}
+            >
+              <span style={styles.leaderRank}>
+                {index + 1}
+              </span>
 
-                <span style={styles.leaderName}>
-                  {leader.name}
-                </span>
+              <span style={styles.leaderName}>
+                {leader.name}
+              </span>
 
-                <span style={styles.leaderScore}>
-                  {leader.score.toLocaleString()}
-                </span>
-              </div>
-            )
-          )}
+              <span style={styles.leaderScore}>
+                {leader.score.toLocaleString()}
+              </span>
+            </div>
+          ))}
         </div>
 
         <p style={styles.localNotice}>
-          This leaderboard is currently stored only
-          in this browser session. A shared community
-          leaderboard can be connected later.
+          Shared leaderboard for the current weekly
+Structural GeoGuess challenge.
         </p>
       </section>
     </div>
@@ -654,49 +708,190 @@ function Leaderboard({
 }
 
 export default function App() {
-  const [roundIndex, setRoundIndex] =
+  const [quiz, setQuiz] = useState(null);
+  const [loadingError, setLoadingError] =
+    useState("");
+  const [loadingAttempt, setLoadingAttempt] =
     useState(0);
 
+  const [roundIndex, setRoundIndex] =
+    useState(0);
   const [score, setScore] = useState(0);
-
   const [guess, setGuess] = useState(null);
-
   const [selectedYear, setSelectedYear] =
     useState(1900);
-
   const [result, setResult] =
     useState(null);
-
   const [finished, setFinished] =
     useState(false);
 
   const [leaders, setLeaders] =
     useState(starterLeaders);
-
   const [showLeaderboard, setShowLeaderboard] =
     useState(false);
-
   const [playerName, setPlayerName] =
     useState("");
-
   const [scoreSaved, setScoreSaved] =
     useState(false);
+const [leaderboardLoading, setLeaderboardLoading] =
+  useState(false);
 
+const [leaderboardError, setLeaderboardError] =
+  useState("");
+
+const [scoreSubmitting, setScoreSubmitting] =
+  useState(false);
+
+  useEffect(() => {
+    let componentIsActive = true;
+
+    async function getQuiz() {
+      setQuiz(null);
+      setLoadingError("");
+
+      try {
+        const weeklyQuiz =
+          await loadWeeklyQuiz();
+
+        if (componentIsActive) {
+          setQuiz(weeklyQuiz);
+        }
+      } catch (error) {
+        if (componentIsActive) {
+          setLoadingError(
+            error instanceof Error
+              ? error.message
+              : "The weekly quiz could not be loaded."
+          );
+        }
+      }
+    }
+
+    getQuiz();
+
+    return () => {
+      componentIsActive = false;
+    };
+  }, [loadingAttempt]);
+  async function refreshLeaderboard() {
+    if (!quiz?.quizId) {
+      return;
+    }
+
+    setLeaderboardLoading(true);
+    setLeaderboardError("");
+
+    try {
+      const databaseScores =
+        await getLeaderboard(quiz.quizId);
+
+      const formattedScores =
+        databaseScores.map((databaseScore) => ({
+          id: databaseScore.id,
+          name: databaseScore.player_name,
+          score: databaseScore.score,
+          submittedAt:
+            databaseScore.submitted_at,
+        }));
+
+      setLeaders(formattedScores);
+    } catch (error) {
+      setLeaderboardError(
+        error instanceof Error
+          ? error.message
+          : "The leaderboard could not be loaded."
+      );
+    } finally {
+      setLeaderboardLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (quiz?.quizId) {
+      refreshLeaderboard();
+    }
+  }, [quiz]);
+
+  if (loadingError) {
+    return (
+      <main style={styles.app}>
+        <section style={styles.centredCard}>
+          <div style={styles.errorIcon}>⚠️</div>
+
+          <h1 style={styles.errorTitle}>
+            The weekly quiz could not be loaded
+          </h1>
+
+          <p
+            style={{
+              color: "#cbd5e1",
+              lineHeight: 1.5,
+            }}
+          >
+            Check the formatting and filenames in
+            the public quiz files.
+          </p>
+
+          <div style={styles.errorMessage}>
+            {loadingError}
+          </div>
+
+          <button
+            type="button"
+            style={styles.retryButton}
+            onClick={() =>
+              setLoadingAttempt(
+                (currentAttempt) =>
+                  currentAttempt + 1
+              )
+            }
+          >
+            Try again
+          </button>
+        </section>
+      </main>
+    );
+  }
+
+  if (!quiz) {
+    return (
+      <main style={styles.app}>
+        <section style={styles.centredCard}>
+          <div style={styles.spinner}>🌍</div>
+
+          <h1 style={styles.errorTitle}>
+            Loading this week&apos;s quiz
+          </h1>
+
+          <p style={{ color: "#94a3b8" }}>
+            Preparing four structural mysteries...
+          </p>
+        </section>
+      </main>
+    );
+  }
+
+  const rounds = quiz.questions;
   const round = rounds[roundIndex];
 
   const progress =
-    ((roundIndex + 1) / rounds.length) *
-    100;
+    ((roundIndex + 1) / rounds.length) * 100;
 
   const maximumGameScore = rounds.reduce(
     (total, currentRound) =>
       total +
-      maximumLocationPoints +
+      MAX_LOCATION_POINTS +
       (currentRound.historical
-        ? maximumYearPoints
+        ? MAX_YEAR_POINTS
         : 0),
     0
   );
+
+  const selectedMinimumYear =
+    round.minimumYear ?? 1750;
+
+  const selectedMaximumYear =
+    round.maximumYear ?? 2026;
 
   function placeGuess(newGuess) {
     if (!result) {
@@ -748,44 +943,84 @@ export default function App() {
       return;
     }
 
-    setRoundIndex(
-      (currentIndex) => currentIndex + 1
-    );
+    const nextRoundIndex = roundIndex + 1;
+    const nextRound = rounds[nextRoundIndex];
 
+    setRoundIndex(nextRoundIndex);
     setGuess(null);
     setResult(null);
-    setSelectedYear(1900);
+
+    setSelectedYear(
+      nextRound.historical
+        ? nextRound.minimumYear ?? 1900
+        : 1900
+    );
   }
 
   function restartGame() {
     setRoundIndex(0);
     setScore(0);
     setGuess(null);
-    setSelectedYear(1900);
     setResult(null);
     setFinished(false);
     setPlayerName("");
     setScoreSaved(false);
     setShowLeaderboard(false);
+
+    setSelectedYear(
+      rounds[0].historical
+        ? rounds[0].minimumYear ?? 1900
+        : 1900
+    );
   }
 
-  function saveScore() {
+  async function saveScore() {
     const cleanName = playerName.trim();
 
-    if (!cleanName || scoreSaved) {
+    if (
+      !cleanName ||
+      scoreSaved ||
+      scoreSubmitting
+    ) {
       return;
     }
 
-    setLeaders((currentLeaders) => [
-      ...currentLeaders,
-      {
-        name: cleanName,
-        score,
-      },
-    ]);
+    if (!quiz.quizId) {
+      setLeaderboardError(
+        "This quiz needs a quizId in quiz.json before scores can be submitted."
+      );
 
-    setScoreSaved(true);
-    setShowLeaderboard(true);
+      return;
+    }
+
+    setScoreSubmitting(true);
+    setLeaderboardError("");
+
+    try {
+      await submitScore({
+        playerName: cleanName,
+        score,
+        quizId: quiz.quizId,
+        quizTitle:
+          quiz.quizSubtitle ||
+          quiz.quizTitle ||
+          "Structural GeoGuess",
+      });
+
+      setScoreSaved(true);
+
+      await refreshLeaderboard();
+
+      setShowLeaderboard(true);
+    } catch (error) {
+      setLeaderboardError(
+        error instanceof Error
+          ? error.message
+          : "Your score could not be submitted."
+      );
+    } finally {
+      setScoreSubmitting(false);
+    }
   }
 
   if (finished) {
@@ -794,7 +1029,7 @@ export default function App() {
     );
 
     let finalMessage =
-      "A solid effort. Time for another lap around the globe.";
+      "A solid effort. Practice makes perfect.";
 
     if (percentage >= 90) {
       finalMessage =
@@ -815,10 +1050,16 @@ export default function App() {
           <p style={styles.eyebrow}>
             JOURNEY COMPLETE
           </p>
-
+/images/logo.jpg
+🏗 Structural Technical Community Challenge
           <h1 style={styles.title}>
-            Structural GeoGuess
+            {quiz.quizTitle ||
+              "Structural GeoGuess"}
           </h1>
+
+          <p style={styles.subtitle}>
+            {quiz.quizSubtitle}
+          </p>
 
           <div style={styles.finalScore}>
             {score.toLocaleString()}
@@ -863,23 +1104,47 @@ export default function App() {
                   style={styles.nameInput}
                 />
 
-                <button
-                  type="button"
-                  style={{
-                    ...styles.addButton,
-                    ...(!playerName.trim()
-                      ? styles.disabledButton
-                      : {}),
-                  }}
-                  disabled={!playerName.trim()}
-                  onClick={saveScore}
-                >
-                  Add score
-                </button>
+<button
+  type="button"
+  style={{
+    ...styles.addButton,
+    ...(
+      !playerName.trim() ||
+      scoreSubmitting
+        ? styles.disabledButton
+        : {}
+    ),
+  }}
+  disabled={
+    !playerName.trim() ||
+    scoreSubmitting
+  }
+  onClick={saveScore}
+>
+  {scoreSubmitting
+    ? "Submitting..."
+    : "Add score"}
+</button>
+              
               </div>
+              {leaderboardError && (
+  <div
+    style={{
+      marginTop: "12px",
+      padding: "11px",
+      borderRadius: "11px",
+      background: "#450a0a",
+      color: "#fecaca",
+      fontSize: "13px",
+    }}
+  >
+    {leaderboardError}
+  </div>
+)}
+
             </div>
           ) : (
-            <div style={styles.successMessage}>
+            <div style={styles.savedMessage}>
               Your score has been added.
             </div>
           )}
@@ -897,7 +1162,7 @@ export default function App() {
 
             <button
               type="button"
-              style={styles.finalButton}
+              style={styles.finalPrimaryButton}
               onClick={restartGame}
             >
               Play again
@@ -917,7 +1182,7 @@ export default function App() {
     );
   }
 
-    return (
+  return (
     <main style={styles.app}>
       <div style={styles.container}>
         <header style={styles.header}>
@@ -927,8 +1192,15 @@ export default function App() {
             </p>
 
             <h1 style={styles.title}>
-              Structural GeoGuess
+              {quiz.quizTitle ||
+                "Structural GeoGuess"}
             </h1>
+
+            {quiz.quizSubtitle && (
+              <p style={styles.subtitle}>
+                {quiz.quizSubtitle}
+              </p>
+            )}
           </div>
 
           <div style={styles.headerActions}>
@@ -945,7 +1217,9 @@ export default function App() {
             <button
               type="button"
               style={styles.iconButton}
-              onClick={() => setShowLeaderboard(true)}
+              onClick={() =>
+                setShowLeaderboard(true)
+              }
               title="View leaderboard"
               aria-label="View leaderboard"
             >
@@ -966,14 +1240,17 @@ export default function App() {
 
         <div style={styles.questionMeta}>
           <span>
-            Question {roundIndex + 1} of {rounds.length}
+            Question {roundIndex + 1} of{" "}
+            {rounds.length}
           </span>
 
           <span>
             Up to{" "}
             {(
-              maximumLocationPoints +
-              (round.historical ? maximumYearPoints : 0)
+              MAX_LOCATION_POINTS +
+              (round.historical
+                ? MAX_YEAR_POINTS
+                : 0)
             ).toLocaleString()}{" "}
             points
           </span>
@@ -989,30 +1266,34 @@ export default function App() {
         </div>
 
         <section style={styles.card}>
-          <div style={styles.artworkPrompt}>
+          <div style={styles.sectionHeader}>
             <h2 style={styles.sectionTitle}>
               Identify the structure
             </h2>
 
             <span style={styles.sectionNote}>
-              Study the illustration, then place your pin
+              Study the image, then place your pin
             </span>
           </div>
 
-          <Artwork
-            type={round.artwork}
-            name={round.answer}
-            revealName={Boolean(result)}
+          <QuizImage
+            key={round.image}
+            image={round.image}
+            name={round.name}
+            location={round.location}
+            revealAnswer={Boolean(result)}
           />
 
-          <div style={styles.clueBox}>
-            <strong>Structural clue: </strong>
-            {round.clue}
-          </div>
+          {round.clue && (
+            <div style={styles.clueBox}>
+              <strong>Structural clue: </strong>
+              {round.clue}
+            </div>
+          )}
         </section>
 
         <section style={styles.card}>
-          <div style={styles.mapHeadingRow}>
+          <div style={styles.sectionHeader}>
             <h2 style={styles.sectionTitle}>
               Place your pin
             </h2>
@@ -1062,19 +1343,21 @@ export default function App() {
 
               <input
                 type="range"
-                min={round.minimumYear}
-                max={round.maximumYear}
+                min={selectedMinimumYear}
+                max={selectedMaximumYear}
                 value={selectedYear}
                 disabled={Boolean(result)}
                 onChange={(event) =>
-                  setSelectedYear(Number(event.target.value))
+                  setSelectedYear(
+                    Number(event.target.value)
+                  )
                 }
                 style={styles.range}
               />
 
               <div style={styles.rangeLabels}>
-                <span>{round.minimumYear}</span>
-                <span>{round.maximumYear}</span>
+                <span>{selectedMinimumYear}</span>
+                <span>{selectedMaximumYear}</span>
               </div>
             </div>
           )}
@@ -1084,7 +1367,9 @@ export default function App() {
               type="button"
               style={{
                 ...styles.primaryButton,
-                ...(!guess ? styles.disabledButton : {}),
+                ...(!guess
+                  ? styles.disabledButton
+                  : {}),
               }}
               disabled={!guess}
               onClick={lockAnswer}
@@ -1099,7 +1384,7 @@ export default function App() {
                 </div>
 
                 <h2 style={styles.resultTitle}>
-                  {round.answer}
+                  {round.name}
                 </h2>
 
                 <span style={styles.resultLocation}>
@@ -1129,7 +1414,8 @@ export default function App() {
                     </span>
 
                     <span style={styles.metricValue}>
-                      +{result.locationPoints.toLocaleString()}
+                      +
+                      {result.locationPoints.toLocaleString()}
                     </span>
                   </div>
 
@@ -1140,7 +1426,8 @@ export default function App() {
                       </span>
 
                       <span style={styles.metricValue}>
-                        +{result.yearPoints.toLocaleString()}
+                        +
+                        {result.yearPoints.toLocaleString()}
                       </span>
                     </div>
                   )}
@@ -1151,7 +1438,8 @@ export default function App() {
                     </span>
 
                     <span style={styles.metricValue}>
-                      +{result.roundPoints.toLocaleString()}
+                      +
+                      {result.roundPoints.toLocaleString()}
                     </span>
                   </div>
                 </div>
@@ -1175,7 +1463,9 @@ export default function App() {
       {showLeaderboard && (
         <Leaderboard
           leaders={leaders}
-          onClose={() => setShowLeaderboard(false)}
+          onClose={() =>
+            setShowLeaderboard(false)
+          }
         />
       )}
     </main>
