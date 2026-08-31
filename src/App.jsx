@@ -432,4 +432,115 @@ export default function App() {
   }
 
   return (
-    <main style={styles.
+    <main style={styles.app}>
+      <div style={styles.container}>
+        <header style={styles.header}>
+          <div>
+            <p style={styles.eyebrow}>
+              TECHNICAL COMMUNITIES
+            </p>
+
+            <h1 style={styles.title}>
+              Structural GeoGuess
+            </h1>
+          </div>
+
+          <div style={styles.scoreBox}>
+            <span style={styles.scoreNumber}>
+              {score.toLocaleString()}
+            </span>
+
+            <span style={styles.scoreLabel}>
+              points
+            </span>
+          </div>
+        </header>
+
+        <div style={styles.questionMeta}>
+          <span>
+            Question {questionIndex + 1} of {questions.length}
+          </span>
+
+          <span>1,000 points available</span>
+        </div>
+
+        <div style={styles.progressTrack}>
+          <div
+            style={{
+              ...styles.progressBar,
+              width: `${progress}%`,
+            }}
+          />
+        </div>
+
+        <section style={styles.card}>
+          <div style={styles.hero}>
+            <div style={styles.heroPattern} />
+
+            <div>
+              <div style={styles.icon}>
+                {question.icon}
+              </div>
+
+              <h2 style={styles.structureName}>
+                {question.structure}
+              </h2>
+            </div>
+          </div>
+
+          <div style={styles.questionBody}>
+            <h3 style={styles.prompt}>
+              Where in the world is this structure?
+            </h3>
+
+            <p style={styles.clue}>
+              {question.clue}
+            </p>
+
+            <div style={styles.optionsGrid}>
+              {question.options.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  style={getButtonStyle(option)}
+                  onClick={() => selectAnswer(option)}
+                  disabled={selectedAnswer !== null}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+
+            {selectedAnswer !== null && (
+              <>
+                <div style={styles.feedback}>
+                  <span style={styles.feedbackTitle}>
+                    {answerIsCorrect
+                      ? "Correct! +1,000 points"
+                      : "Not quite"}
+                  </span>
+
+                  <p style={styles.feedbackText}>
+                    The correct answer is{" "}
+                    <strong>{question.correctAnswer}</strong>.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  style={styles.nextButton}
+                  onClick={nextQuestion}
+                >
+                  {questionIndex === questions.length - 1
+                    ? "Finish game"
+                    : "Next question"}{" "}
+                  →
+                </button>
+              </>
+            )}
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
