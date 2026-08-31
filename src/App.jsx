@@ -438,4 +438,437 @@ function WorldMap({ guess, answer, locked, onGuess }) {
       title={
         locked
           ? "Answer locked"
-      
+          : "Click the map to place your pin"
+      }
+    >
+      <svg
+        ref={svgRef}
+        viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`}
+        preserveAspectRatio="none"
+        style={styles.mapSvg}
+        onClick={handleMapClick}
+        role="img"
+        aria-label="Interactive world map"
+      >
+        <defs>
+          <linearGradient
+            id="oceanGradient"
+            x1="0"
+            y1="0"
+            x2="0"
+            y2="1"
+          >
+            <stop offset="0%" stopColor="#a6dfed" />
+            <stop offset="100%" stopColor="#63afc8" />
+          </linearGradient>
+
+          <linearGradient
+            id="landGradient"
+            x1="0"
+            y1="0"
+            x2="0"
+            y2="1"
+          >
+            <stop offset="0%" stopColor="#7fb77e" />
+            <stop offset="100%" stopColor="#46775a" />
+          </linearGradient>
+
+          <filter
+            id="markerShadow"
+            x="-50%"
+            y="-50%"
+            width="200%"
+            height="200%"
+          >
+            <feDropShadow
+              dx="0"
+              dy="2"
+              stdDeviation="2"
+              floodColor="#0f172a"
+              floodOpacity="0.55"
+            />
+          </filter>
+        </defs>
+
+        <rect
+          width={MAP_WIDTH}
+          height={MAP_HEIGHT}
+          fill="url(#oceanGradient)"
+        />
+
+        <g
+          fill="none"
+          stroke="#28758d"
+          strokeWidth="0.7"
+          opacity="0.28"
+          pointerEvents="none"
+        >
+          {[100, 200, 300, 400].map((mapY) => (
+            <line
+              key={`horizontal-${mapY}`}
+              x1="0"
+              y1={mapY}
+              x2={MAP_WIDTH}
+              y2={mapY}
+            />
+          ))}
+
+          {[
+            100, 200, 300, 400, 500, 600, 700, 800, 900,
+          ].map((mapX) => (
+            <line
+              key={`vertical-${mapX}`}
+              x1={mapX}
+              y1="0"
+              x2={mapX}
+              y2={MAP_HEIGHT}
+            />
+          ))}
+        </g>
+
+        <g pointerEvents="none">
+          {countries.map((country) => (
+            <path
+              key={country.id}
+              d={pathGenerator(country) || ""}
+              fill="url(#landGradient)"
+              stroke="#e8f5e9"
+              strokeWidth="0.75"
+            />
+          ))}
+        </g>
+
+        <path
+          d={pathGenerator({ type: "Sphere" }) || ""}
+          fill="none"
+          stroke="#dff6ff"
+          strokeWidth="1.2"
+          pointerEvents="none"
+        />
+
+        {guessPoint && (
+          <g
+            transform={`translate(${guessPoint[0]} ${guessPoint[1]})`}
+            pointerEvents="none"
+            filter="url(#markerShadow)"
+          >
+            <circle
+              r="11"
+              fill="#f97316"
+              stroke="white"
+              strokeWidth="3"
+            />
+            <circle r="3" fill="white" />
+          </g>
+        )}
+
+        {answerPoint && (
+          <g
+            transform={`translate(${answerPoint[0]} ${answerPoint[1]})`}
+            pointerEvents="none"
+            filter="url(#markerShadow)"
+          >
+            <circle
+              r="12"
+              fill="#22c55e"
+              stroke="white"
+              strokeWidth="3"
+            />
+            <circle r="3" fill="white" />
+          </g>
+        )}
+      </svg>
+    </div>
+  );
+}
+
+export default function App() {
+  const [questionIndex, setQuestionIndex] = useState(0);
+  const [score, setScore] = useState(0);
+  const [guess, setGuess] = useState(null);
+  const [result, setResult] = useState(null);
+  const [finished, setFinished] = useState(false);
+
+  const question = questions[questionIndex];
+
+  const progress =
+    ((questionIndex + 1) / questions.length) * 100;
+
+  function placeGuess(newGuess) {
+    if (!result) {
+      setGuess(newGuess);
+    }
+  }
+
+  function lockAnswer() {
+    if (!guess || result) {
+      return;
+    }
+
+    const distance = calculateDistance(
+      guess.latitude,
+      guess.longitude,
+      question.latitude,
+      question.longitude
+    );
+
+    const points = calculatePoints(distance);
+
+    setResult({
+      distance,
+      points,
+    });
+
+    setScore((currentScore) => currentScore + points);
+  }
+
+  function nextQuestion() {
+    if (questionIndex === questions.length - 1) {
+      setFinished(true);
+      return;
+    }
+
+    setQuestionIndex((currentIndex) => currentIndex + 1);
+    setGuess(null);
+    setResult(null);
+  }
+
+  function restartGame() {
+    setQuestionIndex(0);
+    setScore(0);
+    setGuess(null);
+    setResult(null);
+    setFinished(false);
+  }
+
+  if (finished) {
+    const maximumScore = questions.length * MAX_POINTS;
+    const percentage = Math.round(
+      (score / maximumScore) * 100
+    );
+
+    let finalMessage =
+      "A solid effort. Time for another lap around the globe.";
+
+    if (percentage >= 90) {
+      finalMessage =
+        "Outstanding. Your structural geography is seriously impressive.";
+    } else if (percentage >= 70) {
+      finalMessage =
+        "Excellent work. Very few structures escaped your radar.";
+    } else if (percentage >= 50) {
+      finalMessage =
+        "A respectable result. A few structures were hiding in plain sight.";
+    }
+
+    return (
+      <main style={styles.app}>
+        <section style={styles.resultsCard}>
+          <div style={styles.trophy}>🏆</div>
+
+          <p style={styles.eyebrow}>
+            JOURNEY COMPLETE
+          </p>
+
+          <h1 style={styles.title}>
+            Structural GeoGuess
+          </h1>
+
+          <div style={styles.finalScore}>
+            {score.toLocaleString()}
+          </div>
+
+          <p style={{ color: "#94a3b8" }}>
+            points out of{" "}
+            {maximumScore.toLocaleString()}
+          </p>
+
+          <p
+            style={{
+              marginTop: "20px",
+              color: "#e2e8f0",
+              fontSize: "18px",
+              lineHeight: 1.5,
+            }}
+          >
+            {finalMessage}
+          </p>
+
+          <button
+            type="button"
+            style={styles.restartButton}
+            onClick={restartGame}
+          >
+            Play again
+          </button>
+        </section>
+      </main>
+    );
+  }
+
+  return (
+    <main style={styles.app}>
+      <div style={styles.container}>
+        <header style={styles.header}>
+          <div>
+            <p style={styles.eyebrow}>
+              TECHNICAL COMMUNITIES
+            </p>
+
+            <h1 style={styles.title}>
+              Structural GeoGuess
+            </h1>
+          </div>
+
+          <div style={styles.scoreBox}>
+            <span style={styles.scoreNumber}>
+              {score.toLocaleString()}
+            </span>
+
+            <span style={styles.scoreLabel}>
+              points
+            </span>
+          </div>
+        </header>
+
+        <div style={styles.questionMeta}>
+          <span>
+            Question {questionIndex + 1} of{" "}
+            {questions.length}
+          </span>
+
+          <span>Up to 1,000 points</span>
+        </div>
+
+        <div style={styles.progressTrack}>
+          <div
+            style={{
+              ...styles.progressBar,
+              width: `${progress}%`,
+            }}
+          />
+        </div>
+
+        <section style={styles.card}>
+          <div style={styles.questionHeader}>
+            <div style={styles.iconBox}>
+              {question.icon}
+            </div>
+
+            <div>
+              <h2 style={styles.structureName}>
+                {question.structure}
+              </h2>
+
+              <p style={styles.clue}>
+                {question.clue}
+              </p>
+            </div>
+          </div>
+
+          <div style={styles.mapSection}>
+            <div style={styles.mapHeadingRow}>
+              <h3 style={styles.mapHeading}>
+                Place your pin
+              </h3>
+
+              <span style={styles.mapInstruction}>
+                {result
+                  ? "Answer locked"
+                  : guess
+                    ? "Click again to move your pin"
+                    : "Click anywhere on the map"}
+              </span>
+            </div>
+
+            <WorldMap
+              guess={guess}
+              answer={question}
+              locked={Boolean(result)}
+              onGuess={placeGuess}
+            />
+
+            <div style={styles.legend}>
+              <span style={styles.legendItem}>
+                <span style={styles.orangeDot} />
+                Your guess
+              </span>
+
+              {result && (
+                <span style={styles.legendItem}>
+                  <span style={styles.greenDot} />
+                  Correct location
+                </span>
+              )}
+            </div>
+
+            {!result ? (
+              <button
+                type="button"
+                style={{
+                  ...styles.button,
+                  ...(!guess
+                    ? styles.disabledButton
+                    : {}),
+                }}
+                disabled={!guess}
+                onClick={lockAnswer}
+              >
+                Lock answer
+              </button>
+            ) : (
+              <>
+                <div style={styles.resultBox}>
+                  <h3 style={styles.resultTitle}>
+                    {question.structure}
+                  </h3>
+
+                  <span style={styles.resultLocation}>
+                    {question.location}
+                  </span>
+
+                  <div style={styles.resultGrid}>
+                    <div style={styles.resultMetric}>
+                      <span style={styles.metricLabel}>
+                        DISTANCE
+                      </span>
+
+                      <span style={styles.metricValue}>
+                        {Math.round(
+                          result.distance
+                        ).toLocaleString()}{" "}
+                        km
+                      </span>
+                    </div>
+
+                    <div style={styles.resultMetric}>
+                      <span style={styles.metricLabel}>
+                        ROUND SCORE
+                      </span>
+
+                      <span style={styles.metricValue}>
+                        +{result.points.toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  style={styles.button}
+                  onClick={nextQuestion}
+                >
+                  {questionIndex ===
+                  questions.length - 1
+                    ? "Finish game"
+                    : "Next question"}{" "}
+                  →
+                </button>
+              </>
+            )}
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
