@@ -43,7 +43,7 @@ function calculateDistance(
 function calculateLocationPoints(distance) {
   return Math.round(
     MAX_LOCATION_POINTS *
-      Math.exp(-distance / 2000)
+      Math.exp(-distance / 500)
   );
 }
 
