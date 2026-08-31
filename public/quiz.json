@@ -1,0 +1,42 @@
+{
+  "quizTitle": "Structural GeoGuess",
+  "quizSubtitle": "Week 1: Global Structural Icons",
+  "questions": [
+    {
+      "name": "Eiffel Tower",
+      "location": "Paris, France",
+      "latitude": 48.8584,
+      "longitude": 2.2945,
+      "image": "/images/question-1.jpg",
+      "clue": "A nineteenth-century wrought-iron landmark."
+    },
+    {
+      "name": "Sydney Opera House",
+      "location": "Sydney, Australia",
+      "latitude": -33.8568,
+      "longitude": 151.2153,
+      "image": "/images/question-2.jpg",
+      "clue": "A performing arts complex with a distinctive shell roof."
+    },
+    {
+      "name": "Golden Gate Bridge",
+      "location": "San Francisco, USA",
+      "latitude": 37.8199,
+      "longitude": -122.4783,
+      "image": "/images/question-3.jpg",
+      "clue": "An iconic suspension bridge spanning a coastal strait."
+    },
+    {
+      "name": "Brooklyn Bridge",
+      "location": "New York City, USA",
+      "latitude": 40.7061,
+      "longitude": -73.9969,
+      "image": "/images/question-4.jpg",
+      "clue": "A historic hybrid suspension and cable-stayed bridge.",
+      "historical": true,
+      "year": 1883,
+      "minimumYear": 1750,
+      "maximumYear": 2026
+    }
+  ]
+}
