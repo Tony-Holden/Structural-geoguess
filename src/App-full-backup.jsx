@@ -43,7 +43,7 @@ function calculateDistance(
 function calculateLocationPoints(distance) {
   return Math.round(
     MAX_LOCATION_POINTS *
-      Math.exp(-distance / 2000)
+      Math.exp(-distance / 1000)
   );
 }
 
@@ -1159,14 +1159,15 @@ const [scoreSubmitting, setScoreSubmitting] =
 
           <div style={styles.finalButtons}>
             <button
-              type="button"
-              style={styles.finalSecondaryButton}
-              onClick={() =>
-                setShowLeaderboard(true)
-              }
-            >
-              View leaderboard
-            </button>
+  type="button"
+  style={styles.finalSecondaryButton}
+  onClick={async () => {
+    await refreshLeaderboard();
+    setShowLeaderboard(true);
+  }}
+>
+  View leaderboard
+</button>
 
             <button
               type="button"
@@ -1229,16 +1230,17 @@ const [scoreSubmitting, setScoreSubmitting] =
             </div>
 
             <button
-              type="button"
-              style={styles.iconButton}
-              onClick={() =>
-                setShowLeaderboard(true)
-              }
-              title="View leaderboard"
-              aria-label="View leaderboard"
-            >
-              🏆
-            </button>
+  type="button"
+  style={styles.iconButton}
+  onClick={async () => {
+    await refreshLeaderboard();
+    setShowLeaderboard(true);
+  }}
+  title="View leaderboard"
+  aria-label="View leaderboard"
+>
+  🏆
+</button>
 
             <button
               type="button"

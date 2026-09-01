@@ -9,7 +9,7 @@ export async function getLeaderboard(quizId) {
     .eq("quiz_id", quizId)
     .order("score", { ascending: false })
     .order("submitted_at", { ascending: true })
-    .limit(50);
+    .limit(200);
 
   if (error) {
     throw new Error(error.message);
