@@ -945,44 +945,68 @@ const [scoreSubmitting, setScoreSubmitting] =
       (currentScore) =>
         currentScore + roundPoints
     );
+    
+    setTimeout(() => {
+  window.scrollTo({
+    top: document.body.scrollHeight,
+    behavior: "smooth",
+  });
+}, 100);
+     
   }
 
   function nextRound() {
-    if (roundIndex === rounds.length - 1) {
-      setFinished(true);
-      return;
-    }
+  if (roundIndex === rounds.length - 1) {
+    setFinished(true);
 
-    const nextRoundIndex = roundIndex + 1;
-    const nextRound = rounds[nextRoundIndex];
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
 
-    setRoundIndex(nextRoundIndex);
-    setGuess(null);
-    setResult(null);
-
-    setSelectedYear(
-      nextRound.historical
-        ? nextRound.minimumYear ?? 1900
-        : 1900
-    );
+    return;
   }
+
+  const nextRoundIndex = roundIndex + 1;
+  const nextRound = rounds[nextRoundIndex];
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth",
+  });
+
+  setRoundIndex(nextRoundIndex);
+  setGuess(null);
+  setResult(null);
+
+  setSelectedYear(
+    nextRound.historical
+      ? nextRound.minimumYear ?? 1900
+      : 1900
+  );
+}
 
   function restartGame() {
-    setRoundIndex(0);
-    setScore(0);
-    setGuess(null);
-    setResult(null);
-    setFinished(false);
-    setPlayerName("");
-    setScoreSaved(false);
-    setShowLeaderboard(false);
+  window.scrollTo({
+    top: 0,
+    behavior: "auto",
+  });
 
-    setSelectedYear(
-      rounds[0].historical
-        ? rounds[0].minimumYear ?? 1900
-        : 1900
-    );
-  }
+  setRoundIndex(0);
+  setScore(0);
+  setGuess(null);
+  setResult(null);
+  setFinished(false);
+  setPlayerName("");
+  setScoreSaved(false);
+  setShowLeaderboard(false);
+
+  setSelectedYear(
+    rounds[0].historical
+      ? rounds[0].minimumYear ?? 1900
+      : 1900
+  );
+}
 
   async function saveScore() {
     const cleanName = playerName.trim();
@@ -1348,14 +1372,29 @@ const [scoreSubmitting, setScoreSubmitting] =
           {round.historical && (
             <div style={styles.yearPanel}>
               <div style={styles.yearHeader}>
-                <span style={styles.yearTitle}>
-                  Year: {selectedYear}
-                </span>
+  <div>
+    <div
+      style={{
+        marginBottom: "5px",
+        color: "#8cc63f",
+        fontSize: "13px",
+        fontWeight: "900",
+        letterSpacing: "0.06em",
+      }}
+    >
+      📅 BONUS QUESTION
+    </div>
 
-                <span style={styles.yearPoints}>
-                  Up to 1,000 additional points
-                </span>
-              </div>
+    <span style={styles.yearTitle}>
+      What is the construction year?{" "}
+      <strong>{selectedYear}</strong>
+    </span>
+  </div>
+
+  <span style={styles.yearPoints}>
+    Up to 1,000 additional points
+  </span>
+</div>
 
               <input
                 type="range"
