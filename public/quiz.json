@@ -1,41 +1,41 @@
 {
-  "quizId": "2026-week-01",
+  "quizId": "2026-week-02",
   "quizTitle": "Structural GeoGuess",
-  "quizSubtitle": "Week 1: Aurecon Icons",
+  "quizSubtitle": "Week 2: Four Structures. Four Countries. One Guess.",
   "questions": [
     {
-      "name": "Wembley Stadium",
-      "location": "London, United Kingdom",
-      "latitude": 51.5560,
-      "longitude": -0.2796,
+      "name": "Gelephu International Airport",
+      "location": "Gelephu, Bhutan",
+      "latitude": 26.8848,
+      "longitude": 90.4890,
       "image": "/images/question-1.jpg",
-      "clue": "One of the world's largest arch-supported roof structures."
+      "clue": "A new international gateway combining modern engineering with traditional craftsmanship beneath the Himalayas."
     },
     {
-      "name": "Sir Leo Hielscher Bridges (Gateway Bridges)",
-      "location": "Brisbane, Australia",
-      "latitude": -27.4350,
-      "longitude": 153.1050,
+      "name": "Cape Lambert Port Export Facility",
+      "location": "Cape Lambert, Western Australia, Australia",
+      "latitude": -20.6330,
+      "longitude": 117.1760,
       "image": "/images/question-2.jpg",
-      "clue": "Aurecon's predecessor companies contributed to this strategic transport link."
+      "clue": "One of the world's largest bulk export facilities, handling vast quantities of iron ore for global markets."
     },
     {
-      "name": "Forum Groningen",
-      "location": "Groningen, Netherlands",
-      "latitude": 53.2196,
-      "longitude": 6.5726,
+      "name": "Australian Embassy",
+      "location": "Washington D.C., United States",
+      "latitude": 38.9053,
+      "longitude": -77.0396,
       "image": "/images/question-3.jpg",
-      "clue": "An unconventional building where the structure had to follow the architecture."
+      "clue": "A contemporary diplomatic building representing Australia in the heart of a global capital."
     },
     {
-      "name": "Buddha Tooth Relic Temple",
-      "location": "Singapore",
-      "latitude": 1.2837,
-      "longitude": 103.8444,
+      "name": "Macau Eiffel Tower",
+      "location": "Macau, China",
+      "latitude": 22.1413,
+      "longitude": 113.5606,
       "image": "/images/question-4.jpg",
-      "clue": "Looks centuries old. It isn't.",
+      "clue": "Pretty  easy right???......",
       "historical": true,
-      "year": 2007,
+      "year": 2016,
       "minimumYear": 1900,
       "maximumYear": 2026
     }
