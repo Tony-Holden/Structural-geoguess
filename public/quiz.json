@@ -1,41 +1,41 @@
 {
-  "quizId": "2026-week-02",
+  "quizId": "2026-week-03",
   "quizTitle": "Structural GeoGuess",
-  "quizSubtitle": "Week 2: Four Structures. Four Countries. One Guess.",
+  "quizSubtitle": "Week 3: At Aurecon: Wood is Good!",
   "questions": [
     {
-      "name": "Gelephu International Airport",
-      "location": "Gelephu, Bhutan",
-      "latitude": 26.8848,
-      "longitude": 90.4890,
+      "name": "Western Australian Maritime Museum",
+      "location": "Fremantle, Western Australia",
+      "latitude": -32.054817,
+      "longitude": 115.739311,
       "image": "/images/question-1.jpg",
-      "clue": "A new international gateway combining modern engineering with traditional craftsmanship beneath the Himalayas."
+      "clue": "With a timber roof spanning more than 60 metres, this building is home to the yacht that ended the USA's 132-year America's Cup winning streak."
     },
     {
-      "name": "Cape Lambert Port Export Facility",
-      "location": "Cape Lambert, Western Australia, Australia",
-      "latitude": -20.6330,
-      "longitude": 117.1760,
+      "name": "Gaia (Nanyang Technological University)",
+      "location": "Singapore",
+      "latitude": 1.3486,
+      "longitude": 103.6830,
       "image": "/images/question-2.jpg",
-      "clue": "One of the world's largest bulk export facilities, handling vast quantities of iron ore for global markets."
+      "clue": "This was the largest mass timber building in Asia when completed."
     },
     {
-      "name": "Australian Embassy",
-      "location": "Washington D.C., United States",
-      "latitude": 38.9053,
-      "longitude": -77.0396,
+      "name": "25 King Street",
+      "location": "Brisbane, Australia",
+      "latitude": -27.452188,
+      "longitude": 153.033866,
       "image": "/images/question-3.jpg",
-      "clue": "A contemporary diplomatic building representing Australia in the heart of a global capital."
+      "clue": "When completed in 2018, it was one of the world's tallest engineered timber office buildings."
     },
     {
-      "name": "Macau Eiffel Tower",
-      "location": "Macau, China",
-      "latitude": 22.1413,
-      "longitude": 113.5606,
+      "name": "NMIT Arts & Media Building",
+      "location": "Marlborough",
+      "latitude": -41.275394,
+      "longitude": 173.288559,
       "image": "/images/question-4.jpg",
-      "clue": "Pretty  easy right???......",
+      "clue": "Winner of an IStructE Award for pioneering damage-avoidance seismic design in a timber building.",
       "historical": true,
-      "year": 2016,
+      "year": 2010,
       "minimumYear": 1900,
       "maximumYear": 2026
     }
